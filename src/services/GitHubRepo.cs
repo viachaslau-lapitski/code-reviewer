@@ -11,7 +11,7 @@ namespace vsl
 {
     public class GitHubRepo
     {
-        public async static Task<InputPR?> getPRInfo(HttpRequest req)
+        public async static Task<InputPR> getPRInfo(HttpRequest req)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             var obj = JObject.Parse(requestBody);
@@ -23,8 +23,13 @@ namespace vsl
             };
         }
 
-        public async static IAsyncEnumerable<GitHubCommit> MapCommits(GitHubClient client, InputPR data, IReadOnlyList<PullRequestCommit> list)
+        public async static IAsyncEnumerable<GitHubCommit> MapCommits(GitHubClient client, InputPR data, IReadOnlyList<PullRequestCommit>? list)
         {
+            if (list == null)
+            {
+                yield break;
+            }
+
             foreach (var commit in list)
             {
                 yield return await client.Repository.Commit.Get(data.UserName, data.RepoName, commit.Sha);

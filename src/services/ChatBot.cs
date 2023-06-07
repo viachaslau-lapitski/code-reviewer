@@ -1,10 +1,12 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure;
 using Azure.AI.OpenAI;
+using Newtonsoft.Json;
 
 namespace vsl
 {
@@ -14,10 +16,18 @@ namespace vsl
         private OpenAIClient _client;
         private string getPrompt(string patch) => $@"
         Please review the code patch below     
-        1) do not explain or summarize what code/change does    
-        2) be concise    
-        3) list only issues (bugs, risks), otherwise, say lgtm    
-        4) list code improvements if any, otherwise do not generate anything
+        1) Do not explain or summarize what code/change does.    
+        2) Be concise.    
+        3) List issues (bugs, risks) within the patch.    
+        4) List code improvements if any within the patch.
+        5) For every item found, give me a line index in the patch to comment on. Start with position 0 for the first line of the patch. Increment the position by 1 for each subsequent line.
+        
+        the expected result is json array:              
+        """"""
+        [{{comment = ""some text"", position = ""number""}}]              
+        """"""
+        
+        patch:
         """"""
         {patch}
         """"""
@@ -30,7 +40,7 @@ namespace vsl
                 new AzureKeyCredential(key));
         }
 
-        public async Task<string?> getReview(string patch)
+        public async Task<List<Review>> getReviews(string patch)
         {
             var prompt = getPrompt(patch);
             Response<ChatCompletions> responseWithoutStream = await _client.GetChatCompletionsAsync(
@@ -50,7 +60,8 @@ namespace vsl
             });
 
             ChatCompletions completions = responseWithoutStream.Value;
-            return completions.Choices.FirstOrDefault()?.Message.FromAssistant()?.Content;
+            var json = completions.Choices.FirstOrDefault()?.Message.FromAssistant()?.Content;
+            return json != null ? JsonConvert.DeserializeObject<List<Review>>(json) : new List<Review>();
         }
     }
 }

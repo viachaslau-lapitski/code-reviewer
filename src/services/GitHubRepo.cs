@@ -1,9 +1,9 @@
 #nullable enable
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Octokit;
 
@@ -11,6 +11,19 @@ namespace vsl
 {
     public class GitHubRepo
     {
+        private GitHubClient _github;
+        private ILogger _log;
+        private ChatBot _bot;
+        private InputPR _inputPR;
+
+        public GitHubRepo(GitHubClient github, ILogger log, string botKey, InputPR inputPR)
+        {
+            _github = github;
+            _log = log;
+            _bot = new ChatBot(botKey); ;
+            _inputPR = inputPR;
+        }
+
         public async static Task<InputPR> getPRInfo(HttpRequest req)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
@@ -34,16 +47,23 @@ namespace vsl
             return response.Token;
         }
 
-        public async static IAsyncEnumerable<GitHubCommit> MapCommits(GitHubClient client, InputPR data, IReadOnlyList<PullRequestCommit>? list)
+        public async Task ProcessCommit(PullRequestCommit prCommit)
         {
-            if (list == null)
-            {
-                yield break;
-            }
+            _log.LogInformation($"processing commit {prCommit.Sha} for {_inputPR.UserName}:{_inputPR.RepoName}");
+            var commit = await _github.Repository.Commit.Get(_inputPR.UserName, _inputPR.RepoName, prCommit.Sha);
+            var tasks = commit.Files.Where(f => f.Patch.Length < ChatBot.InputTokens).Select(x => ProcessCommitFile(x, prCommit.Sha));
+            await Task.WhenAll(tasks);
+        }
 
-            foreach (var commit in list)
+        private async Task ProcessCommitFile(GitHubCommitFile file, string commitId)
+        {
+            _log.LogInformation($"processing commit file sha: {file.Sha} filename: {file.Filename} for commit {commitId}");
+            var reviews = await _bot.getReviews(file.Patch);
+            foreach (var review in reviews)
             {
-                yield return await client.Repository.Commit.Get(data.UserName, data.RepoName, commit.Sha);
+                var comment = new PullRequestReviewCommentCreate(review.Comment, commitId, file.Filename, review.Position);
+                _log.LogInformation($"Added comment {comment.Info()}");
+                await _github.PullRequest.ReviewComment.Create(_inputPR.UserName, _inputPR.RepoName, _inputPR.Number, comment);
             }
         }
     }

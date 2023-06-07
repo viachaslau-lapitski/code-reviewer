@@ -32,6 +32,7 @@ namespace vsl
 
         public async Task<string?> getReview(string patch)
         {
+            var prompt = getPrompt(patch);
             Response<ChatCompletions> responseWithoutStream = await _client.GetChatCompletionsAsync(
                 "gpt-4",
             new ChatCompletionsOptions()
@@ -39,7 +40,7 @@ namespace vsl
                 Messages =
                 {
                     new ChatMessage(ChatRole.System, @"You are an AI assistant that conducts code reviews."),
-                    new ChatMessage(ChatRole.User, getPrompt(patch)),
+                    new ChatMessage(ChatRole.User, prompt),
                 },
                 Temperature = (float)0.0,
                 MaxTokens = 800,

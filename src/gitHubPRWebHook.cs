@@ -27,7 +27,7 @@ namespace vsl
 
             log.LogInformation($"Incoming request {data}");
 
-            var secrets = await VaultClient.GetSecrets($"{data.UserName}-{data.RepoName}");
+            var secrets = await SecretsService.GetSecrets(data.InstallationId);
             var github = new GitHubClient(new ProductHeaderValue("Code-Reviewer"));
             github.Credentials = new Credentials(secrets.repo);
 

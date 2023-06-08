@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -63,7 +64,14 @@ namespace vsl
             {
                 var comment = new PullRequestReviewCommentCreate(review.Comment, commitId, file.Filename, review.Position);
                 _log.LogInformation($"Added comment {comment.Info()}");
-                await _github.PullRequest.ReviewComment.Create(_inputPR.UserName, _inputPR.RepoName, _inputPR.Number, comment);
+                try
+                {
+                    await _github.PullRequest.ReviewComment.Create(_inputPR.UserName, _inputPR.RepoName, _inputPR.Number, comment);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex, $"Error amid add comment for sha: {file.Sha}, filename: {file.Filename}, commit {commitId}");
+                }
             }
         }
     }

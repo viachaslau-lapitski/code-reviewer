@@ -34,6 +34,7 @@ namespace vsl
                 Number = int.TryParse(obj.SelectToken("$.number")?.ToString(), out int parsedNumber) ? parsedNumber : 0,
                 UserName = obj.SelectToken("$.pull_request.user.login")?.ToString(),
                 RepoName = obj.SelectToken("$.pull_request.head.repo.name")?.ToString(),
+                Action = obj.SelectToken("$.action")?.ToString(),
                 InstallationId = int.TryParse(obj.SelectToken("$.installation.id")?.ToString(), out int parsedId) ? parsedId : 0,
             };
         }

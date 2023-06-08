@@ -8,7 +8,13 @@ namespace vsl
         public string UserName { get; set; }
         public string RepoName { get; set; }
 
+        public string Action { get; set; }
 
-        public bool IsValid() => Number != 0 && InstallationId != 0 && UserName != null && RepoName != null;
+
+        public bool IsValid() => Number != 0
+            && InstallationId != 0
+            && UserName != null
+            && RepoName != null
+            && Action == "opened";
     }
 }
